@@ -1,16 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import {
-  Page,
-  Layout,
-  Card,
-  IndexTable,
-  Thumbnail,
-  Text,
-  TextField,
-  EmptyState,
-  SkeletonBodyText,
-  useIndexResourceState,
-} from '@shopify/polaris';
+import { Page, Layout, Card, IndexTable, Thumbnail, Text, TextField, Spinner, EmptyState, useIndexResourceState } from '@shopify/polaris';
 import { SearchIcon, ImageIcon } from '@shopify/polaris-icons';
 import { BACKEND_URL } from '../config';
 
@@ -29,43 +18,20 @@ const ProductPage = ({ onSelectProduct, shopName }) => {
 
       const response = await fetch(url, {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true"
-        }
+        headers: { "ngrok-skip-browser-warning": "true" }
       });
-
-      if (response.status === 401) {
-        // If unauthorized, redirect to auth (Fixes the issue)
-        window.top.location.href = `${BACKEND_URL}/api/auth?shop=${shopName}&force_auth=true`;
-        return;
-      }
-
       const data = await response.json();
       setProducts(data.products || []);
-    } catch (err) {
-      console.error("Fetch failed:", err);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { console.error("Fetch failed:", err); } 
+    finally { setLoading(false); }
   }, [shopName]);
 
   useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      fetchProducts(searchTerm);
-    }, 500);
-
+    const delayDebounceFn = setTimeout(() => fetchProducts(searchTerm), 500);
     return () => clearTimeout(delayDebounceFn);
   }, [searchTerm, fetchProducts]);
 
-  // --- POLARIS TABLE CONFIG ---
-  const resourceName = {
-    singular: 'product',
-    plural: 'products',
-  };
-
-  const { selectedResources, allResourcesSelected, handleSelectionChange } =
-    useIndexResourceState(products);
+  const { selectedResources, allResourcesSelected, handleSelectionChange } = useIndexResourceState(products);
 
   const rowMarkup = products.map(
     ({ id, title, image, images, variants }, index) => (
@@ -74,14 +40,10 @@ const ProductPage = ({ onSelectProduct, shopName }) => {
         key={id}
         selected={selectedResources.includes(id)}
         position={index}
-        onClick={() => onSelectProduct(id)}
+        onClick={() => onSelectProduct(id)} // 🟢 THIS CLICK OPENS DETAILS
       >
         <IndexTable.Cell>
-          <Thumbnail
-            source={image ? image.src : (images && images[0] ? images[0].src : ImageIcon)}
-            alt={title}
-            size="small"
-          />
+          <Thumbnail source={image ? image.src : (images && images[0] ? images[0].src : ImageIcon)} alt={title} size="small" />
         </IndexTable.Cell>
         <IndexTable.Cell>
           <Text variant="bodyMd" fontWeight="bold" as="span">{title}</Text>
@@ -103,46 +65,28 @@ const ProductPage = ({ onSelectProduct, shopName }) => {
           <Card>
             <div style={{ padding: '16px' }}>
               <TextField
-                label="Search Products"
                 value={searchTerm}
-                onChange={(value) => setSearchTerm(value)}
-                placeholder="Search by title..."
-                autoComplete="off"
+                onChange={setSearchTerm}
+                placeholder="Search products..."
                 prefix={<SearchIcon />}
-                labelHidden
+                autoComplete="off"
                 clearButton
                 onClearButtonClick={() => setSearchTerm("")}
               />
             </div>
-
-            {loading ? (
-               <div style={{padding: '20px'}}>
-                   <SkeletonBodyText lines={5} />
-               </div>
-            ) : products.length === 0 ? (
-                <EmptyState
-                    heading="No products found"
-                    image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
-                >
-                    <p>Try changing your search term.</p>
-                </EmptyState>
-            ) : (
-                <IndexTable
-                  resourceName={resourceName}
-                  itemCount={products.length}
-                  selectedItemsCount={allResourcesSelected ? 'All' : selectedResources.length}
-                  onSelectionChange={handleSelectionChange}
-                  headings={[
-                    { title: 'Image' },
-                    { title: 'Product Title' },
-                    { title: 'Price' },
-                    { title: 'Status' },
-                  ]}
-                  selectable={false}
-                >
-                  {rowMarkup}
-                </IndexTable>
-            )}
+            {loading ? <div style={{padding:'20px'}}><Spinner /></div> : 
+             products.length === 0 ? <EmptyState heading="No products found" image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"><p>Try changing search.</p></EmptyState> :
+             <IndexTable
+                resourceName={{ singular: 'product', plural: 'products' }}
+                itemCount={products.length}
+                selectedItemsCount={allResourcesSelected ? 'All' : selectedResources.length}
+                onSelectionChange={handleSelectionChange}
+                headings={[{ title: 'Image' }, { title: 'Product Title' }, { title: 'Price' }, { title: 'Status' }]}
+                selectable={false}
+             >
+                {rowMarkup}
+             </IndexTable>
+            }
           </Card>
         </Layout.Section>
       </Layout>

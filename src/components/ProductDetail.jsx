@@ -14,42 +14,47 @@ import {
   Modal,
   TextField,
   FormLayout,
-  Toast,
-  Frame
+  Toast
 } from '@shopify/polaris';
 
 import { BACKEND_URL } from '../config';
 
 const ProductDetail = ({ productId, shopName, onBack }) => {
-  // --- STATE ---
+  // --- STATE MANAGEMENT ---
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null);
 
-  // --- MODAL STATE ---
+  // --- MODAL & FORM STATE ---
   const [activeModal, setActiveModal] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
-  // --- FETCH DATA ---
+  // --- FETCH PRODUCT DETAILS ---
   useEffect(() => {
     const fetchDetails = async () => {
       try {
+        // Fetching from the general products list and filtering locally
         const response = await fetch(`${BACKEND_URL}/api/products?shop=${shopName}`, {
           headers: { "ngrok-skip-browser-warning": "true" }
         });
         const data = await response.json();
+        
         if (data.products) {
-          const foundProduct = data.products.find(p => p.id === productId);
+          const foundProduct = data.products.find(p => String(p.id) === String(productId));
           if (foundProduct) {
             setProduct(foundProduct);
             const allImages = foundProduct.images ? foundProduct.images.map(img => img.src) : [];
             if (allImages.length > 0) setSelectedImage(allImages[0]);
           }
         }
-      } catch (error) { console.error("Error:", error); } finally { setLoading(false); }
+      } catch (error) { 
+        console.error("Error fetching product details:", error); 
+      } finally { 
+        setLoading(false); 
+      }
     };
     if (productId) fetchDetails();
   }, [productId, shopName]);
@@ -83,7 +88,7 @@ const ProductDetail = ({ productId, shopName, onBack }) => {
             setActiveModal(false);
             setCustomerName('');
             setCustomerPhone('');
-            setShowToast(true); // Show success message
+            setShowToast(true); 
         } else {
             alert("Failed to save: " + result.message);
         }
@@ -94,28 +99,46 @@ const ProductDetail = ({ productId, shopName, onBack }) => {
     }
   };
 
-  if (loading) return <div style={{display:'flex', justifyContent:'center', marginTop:'50px'}}><Spinner size="large" /></div>;
-  if (!product) return <Page><Banner tone="critical">Product not found</Banner></Page>;
+  // --- RENDER HELPERS ---
+  if (loading) return (
+    <div style={{display:'flex', justifyContent:'center', marginTop:'50px'}}>
+        <Spinner size="large" />
+    </div>
+  );
+
+  if (!product) return (
+    <Page backAction={{content: 'Products', onAction: onBack}}>
+        <Banner tone="critical">Product not found</Banner>
+    </Page>
+  );
 
   const price = product.variants && product.variants[0] ? product.variants[0].price : '0.00';
   const totalInventory = product.variants ? product.variants.reduce((acc, v) => acc + (v.inventory_quantity || 0), 0) : 0;
   const isOutOfStock = totalInventory <= 0;
 
   return (
-    <Frame>
-        <Page
-            title={product.title}
-            subtitle={`PKR ${price}`}
-            backAction={{content: 'Products', onAction: onBack}}
-        >
+    <Page
+        title={product.title}
+        subtitle={`PKR ${price}`}
+        backAction={{content: 'Products', onAction: onBack}}
+    >
         <Layout>
+            {/* Main Product Image Section */}
             <Layout.Section>
                 <Card>
                     <BlockStack gap="400">
-                        <div style={{height: '400px', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#f4f4f4', borderRadius: '8px', overflow: 'hidden'}}>
+                        <div style={{
+                            height: '400px', 
+                            display: 'flex', 
+                            justifyContent: 'center', 
+                            alignItems: 'center', 
+                            background: '#f4f4f4', 
+                            borderRadius: '8px', 
+                            overflow: 'hidden'
+                        }}>
                             <img 
                                 src={selectedImage || 'https://via.placeholder.com/600'} 
-                                alt="Main product" 
+                                alt={product.title} 
                                 style={{maxHeight: '100%', maxWidth: '100%', objectFit: 'contain'}} 
                             />
                         </div>
@@ -123,14 +146,12 @@ const ProductDetail = ({ productId, shopName, onBack }) => {
                 </Card>
             </Layout.Section>
 
+            {/* Side Action Column */}
             <Layout.Section variant="oneThird">
                 <BlockStack gap="500">
-                    
-                    {/* WHATSAPP WIDGET CARD */}
                     <Card>
                         <BlockStack gap="400" alignItems="center">
-                            
-                            {/* 🟢 CLICKABLE ICON TO OPEN MODAL */}
+                            {/* WhatsApp Subscription Icon */}
                             <div 
                                 onClick={toggleModal}
                                 style={{
@@ -160,7 +181,7 @@ const ProductDetail = ({ productId, shopName, onBack }) => {
                                     Notify Me via WhatsApp
                                 </Text>
                                 <Text tone="subdued" alignment="center">
-                                    Click the icon above to test the subscription form.
+                                    Click the icon above to subscribe for restock alerts.
                                 </Text>
                             </BlockStack>
 
@@ -180,19 +201,18 @@ const ProductDetail = ({ productId, shopName, onBack }) => {
 
                     <Card>
                         <BlockStack gap="300">
-                            <Text variant="headingSm" as="h3">Product Description</Text>
+                            <Text variant="headingSm" as="h3">Description</Text>
                             <Divider />
                             <div style={{ maxHeight: '300px', overflowY: 'auto', fontSize: '14px', lineHeight: '1.5', color: '#444'}}>
                                 <div dangerouslySetInnerHTML={{ __html: product.body_html || "<p>No description available.</p>" }} />
                             </div>
                         </BlockStack>
                     </Card>
-
                 </BlockStack>
             </Layout.Section>
         </Layout>
 
-        {/* 🟢 SUBSCRIPTION MODAL */}
+        {/* Subscription Modal */}
         <Modal
             open={activeModal}
             onClose={toggleModal}
@@ -211,7 +231,7 @@ const ProductDetail = ({ productId, shopName, onBack }) => {
         >
             <Modal.Section>
                 <FormLayout>
-                    <p>Enter your details to receive an instant WhatsApp message when <b>{product.title}</b> is back in stock.</p>
+                    <p>Receive an instant WhatsApp message when <b>{product.title}</b> is back in stock.</p>
                     <TextField
                         label="Your Name"
                         value={customerName}
@@ -226,19 +246,17 @@ const ProductDetail = ({ productId, shopName, onBack }) => {
                         type="tel"
                         autoComplete="tel"
                         placeholder="e.g. +92 300 1234567"
-                        helpText="Include your country code."
+                        helpText="Include your country code (e.g., +92)."
                     />
                 </FormLayout>
             </Modal.Section>
         </Modal>
 
-        {/* SUCCESS TOAST */}
+        {/* Success Notification */}
         {showToast && (
             <Toast content="Success! You are subscribed." onDismiss={toggleToast} />
         )}
-
-        </Page>
-    </Frame>
+    </Page>
   );
 };
 

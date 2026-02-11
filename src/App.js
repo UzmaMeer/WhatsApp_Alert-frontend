@@ -1,170 +1,99 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Frame, Navigation, TopBar } from '@shopify/polaris';
-// 🟢 FIXED: Replaced 'LogOutIcon' with 'ExitIcon'
-import { HomeIcon, PaintBrushFlatIcon, ExitIcon } from '@shopify/polaris-icons';
+import { HomeIcon, PaintBrushFlatIcon } from '@shopify/polaris-icons';
 import LandingPage from './components/LandingPage';
 import ProductPage from './components/ProductPage'; 
 import ProductDetail from './components/ProductDetail'; 
 import BrandKitModal from './components/BrandKitModal'; 
+import '@shopify/polaris/build/esm/styles.css';
 
 const App = () => {
-  // --- STATE MANAGEMENT ---
+  // --- STATE ---
   const [shopName, setShopName] = useState(() => localStorage.getItem('shopName') || '');
+  const [isInstalled, setIsInstalled] = useState(() => localStorage.getItem('isInstalled') === 'true');
   
-  const [isInstalled, setIsInstalled] = useState(() => {
-      return localStorage.getItem('isInstalled') === 'true';
-  });
-
-  const [activeTab, setActiveTab] = useState(() => {
-      return localStorage.getItem('activeTab') || 'products';
-  });
-
-  const [selectedProductId, setSelectedProductId] = useState(() => {
-      const savedId = localStorage.getItem('selectedProductId');
-      return (savedId && savedId !== 'null' && savedId !== 'undefined') ? savedId : null;
-  });
-
+  const [activeTab, setActiveTab] = useState('products');
+  const [selectedProductId, setSelectedProductId] = useState(null);
   const [mobileNavigationActive, setMobileNavigationActive] = useState(false);
   const [showBrandKit, setShowBrandKit] = useState(false);
 
-  // --- EFFECT 1: Handle URL Params ---
+  // 🟢 AUTO-LOGIN LOGIC
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const shop = params.get('shop');
-    if (shop) {
-      setShopName(shop);
-      setIsInstalled(true);
+    const urlShop = params.get('shop');
+    
+    if (urlShop) {
+        const cleanShop = urlShop.replace('https://', '').replace('/', '');
+        setShopName(cleanShop);
+        setIsInstalled(true);
+        localStorage.setItem('shopName', cleanShop);
+        localStorage.setItem('isInstalled', 'true');
+        window.history.replaceState({}, document.title, "/");
+    }
+
+    if (params.get('reset') === 'true') {
+        localStorage.clear();
+        setIsInstalled(false);
+        setShopName('');
+        window.history.replaceState({}, document.title, "/");
     }
   }, []);
-
-  // --- EFFECT 2: Auto-Save ---
-  useEffect(() => {
-      localStorage.setItem('shopName', shopName);
-      localStorage.setItem('isInstalled', isInstalled);
-      localStorage.setItem('activeTab', activeTab);
-      localStorage.setItem('selectedProductId', selectedProductId);
-  }, [shopName, isInstalled, activeTab, selectedProductId]);
 
   // --- HANDLERS ---
   const handleLoginSubmit = (enteredShopName) => {
-    if (!enteredShopName) return alert("Please enter store domain");
     let cleanShop = enteredShopName.trim();
-    if (!cleanShop.includes(".myshopify.com")) {
-      cleanShop += ".myshopify.com";
-    }
+    if (!cleanShop.includes(".")) cleanShop += ".myshopify.com";
     setShopName(cleanShop);
-    setIsInstalled(true);
+    localStorage.setItem('shopName', cleanShop);
   };
 
-  const handleDisconnect = useCallback(() => {
-    if (window.confirm("Are you sure you want to disconnect your store?")) {
-        setIsInstalled(false);
-        setShopName('');
-        setSelectedProductId(null);
-        setActiveTab('products');
-        localStorage.clear();
-    }
-  }, []);
-
-  const toggleMobileNavigation = useCallback(
-    () => setMobileNavigationActive((mobileNavigationActive) => !mobileNavigationActive),
-    [],
-  );
-
-  const handleNavClick = (tab) => {
-    setActiveTab(tab);
-    setSelectedProductId(null); 
-    setMobileNavigationActive(false);
+  const handleDisconnect = () => {
+      setIsInstalled(false);
+      setShopName('');
+      localStorage.clear();
   };
 
-  const handleBackToProducts = () => {
-      setSelectedProductId(null);
-  };
-
-  // --- POLARIS MARKUP ---
-
-  // 1. Top Bar (The header with user menu)
-  const userMenuMarkup = (
-    <TopBar.UserMenu
-      actions={[
-        {
-          items: [{content: 'Disconnect Store', icon: ExitIcon, onAction: handleDisconnect}],
-        },
-      ]}
-      name={shopName.replace('.myshopify.com', '')}
-      initials={shopName.charAt(0).toUpperCase()}
-    />
-  );
-
+  // --- UI COMPONENTS ---
   const topBarMarkup = (
     <TopBar
       showNavigationToggle
-      userMenu={userMenuMarkup}
-      onNavigationToggle={toggleMobileNavigation}
+      userMenu={<TopBar.UserMenu actions={[{ items: [{content: 'Disconnect', onAction: handleDisconnect}] }]} name={shopName || "Store"} initials="S" />}
+      onNavigationToggle={() => setMobileNavigationActive(!mobileNavigationActive)}
     />
   );
 
-  // 2. Navigation (The sidebar)
   const navigationMarkup = (
     <Navigation location="/">
       <Navigation.Section
         items={[
-          {
-            label: 'Products',
-            icon: HomeIcon,
-            selected: activeTab === 'products',
-            onClick: () => handleNavClick('products'),
-          },
-          {
-            label: 'Brand Kit',
-            icon: PaintBrushFlatIcon,
-            onClick: () => {
-                setShowBrandKit(true);
-                setMobileNavigationActive(false);
-            },
-          },
+          { label: 'Products', icon: HomeIcon, selected: activeTab === 'products', onClick: () => { setActiveTab('products'); setSelectedProductId(null); } },
+          { label: 'Brand Kit', icon: PaintBrushFlatIcon, onClick: () => setShowBrandKit(true) },
         ]}
       />
     </Navigation>
   );
 
-  // --- RENDER ---
-  
+  // 🟢 ROUTING
   if (!isInstalled) {
-    return (
-        <LandingPage 
-            shopName={shopName} 
-            setShopName={setShopName} 
-            handleInstall={() => handleLoginSubmit(shopName)} 
-        />
-    );
+    return <LandingPage shopName={shopName} setShopName={setShopName} handleInstall={() => handleLoginSubmit(shopName)} />;
   }
 
   return (
-    <Frame
-      topBar={topBarMarkup}
-      navigation={navigationMarkup}
-      showMobileNavigation={mobileNavigationActive}
-      onNavigationDismiss={toggleMobileNavigation}
-    >
-      {showBrandKit && (
-        <BrandKitModal 
-          onClose={() => setShowBrandKit(false)} 
-          shopName={shopName} 
-        />
-      )}
-
+    <Frame topBar={topBarMarkup} navigation={navigationMarkup} showMobileNavigation={mobileNavigationActive} onNavigationDismiss={() => setMobileNavigationActive(false)}>
+      {showBrandKit && <BrandKitModal onClose={() => setShowBrandKit(false)} shopName={shopName} />}
+      
+      {/* If product selected -> Show Detail. Else -> Show List */}
       {selectedProductId ? (
-        <ProductDetail 
-          productId={selectedProductId} 
-          shopName={shopName} 
-          onBack={handleBackToProducts} 
-        />
+          <ProductDetail 
+            productId={selectedProductId} 
+            shopName={shopName} 
+            onBack={() => setSelectedProductId(null)} 
+          />
       ) : (
-        <ProductPage 
-          onSelectProduct={(id) => setSelectedProductId(id)} 
-          shopName={shopName} 
-        />
+          <ProductPage 
+            onSelectProduct={setSelectedProductId} 
+            shopName={shopName} 
+          />
       )}
     </Frame>
   );
