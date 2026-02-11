@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Page, Layout, Card, Text, Button, BlockStack, InlineGrid, TextField, Badge, Box, Divider, Modal, List, Avatar, Banner } from "@shopify/polaris";
+// 🟢 Added 'FooterHelp' and 'Link' to your Polaris imports
+import { Page, Layout, Card, Text, Button, BlockStack, InlineGrid, TextField, Badge, Box, Divider, Modal, List, Avatar, FooterHelp, Link } from "@shopify/polaris";
 import { BACKEND_URL } from "../config";
 
 const STATIC_REVIEWS = [
@@ -17,10 +18,8 @@ const LandingPage = ({ shopName, setShopName, handleInstall }) => {
   const handleMainAction = () => {
       if (!shopName) { alert("Please enter a shop URL"); return; }
       
-      // 1. Trigger local login state
       handleInstall();
       
-      // 2. Redirect to Backend for Shopify OAuth
       let cleanShop = shopName;
       if (!cleanShop.includes(".")) cleanShop += ".myshopify.com";
       window.location.href = `${BACKEND_URL}/api/auth?shop=${cleanShop}`;
@@ -94,12 +93,12 @@ const LandingPage = ({ shopName, setShopName, handleInstall }) => {
             {/* REVIEWS */}
             <Card>
                 <BlockStack gap="400">
-                   <InlineGrid columns="1fr auto" alignItems="center">
+                    <InlineGrid columns="1fr auto" alignItems="center">
                       <Text variant="headingMd" as="h3">Trusted by 800+ Merchants</Text>
                       <Button variant="plain" onClick={() => setIsReviewModalOpen(true)}>Write a review</Button>
-                   </InlineGrid>
-                   <Divider />
-                   <InlineGrid columns={{ xs: 1, sm: 3 }} gap="400">
+                    </InlineGrid>
+                    <Divider />
+                    <InlineGrid columns={{ xs: 1, sm: 3 }} gap="400">
                       {reviews.map((rev, idx) => (
                          <Box key={idx} background="bg-surface-secondary" padding="400" borderRadius="200">
                             <BlockStack gap="200">
@@ -115,12 +114,19 @@ const LandingPage = ({ shopName, setShopName, handleInstall }) => {
                             </BlockStack>
                          </Box>
                       ))}
-                   </InlineGrid>
+                    </InlineGrid>
                 </BlockStack>
             </Card>
           </BlockStack>
         </Layout.Section>
       </Layout>
+
+      {/* 🟢 LEGAL FOOTER: Crucial for Google Safety Approval */}
+      <FooterHelp>
+        Learn more about our{" "}
+        <Link url="/privacy" external>Privacy Policy</Link> and{" "}
+        <Link url="/terms" external>Terms of Service</Link>.
+      </FooterHelp>
 
       {/* REVIEW MODAL */}
       <Modal open={isReviewModalOpen} onClose={() => setIsReviewModalOpen(false)} title="Write a Review" primaryAction={{ content: 'Submit', onAction: submitReview }}>
