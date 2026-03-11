@@ -1,16 +1,11 @@
 // 🟢 LIVE PRODUCTION BACKEND (RAILWAY)
 const RAILWAY_URL = "https://whatsappalert-backend-production.up.railway.app";
 
-// Detect if you are running locally or on the live site
-const isLocalhost = window.location.hostname === "localhost";
-
 /**
  * BACKEND_URL logic:
- * - If on your PC: Uses Ngrok (Update this URL if you restart Ngrok)
- * - If on Firebase: Uses Railway
+ * Humne Ngrok hata diya hai kyunke Backend already Live hai.
+ * Ab chahe aap Localhost par hon ya Firebase par, request Railway par hi jayegi.
  */
-export const BACKEND_URL = isLocalhost 
-    ? "https://snakiest-edward-autochthonously.ngrok-free.dev" 
-    : RAILWAY_URL;
+export const BACKEND_URL = RAILWAY_URL;
 
 console.log(`📡 Frontend is communicating with: ${BACKEND_URL}`);
